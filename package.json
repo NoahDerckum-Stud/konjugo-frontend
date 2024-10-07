@@ -1,0 +1,27 @@
+{
+  "name": "konjugo-frontend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vuepic/vue-datepicker": "^9.0.3",
+    "bootstrap": "^5.3.3",
+    "chart.js": "^4.4.4",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^4.0.0",
+    "vue": "^3.4.21",
+    "vue-chartjs": "^5.3.1",
+    "vue-router": "^4.3.0",
+    "vue3-lottie": "^3.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "sass": "^1.77.1",
+    "vite": "^5.2.8"
+  }
+}
