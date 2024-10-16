@@ -1,11 +1,3 @@
-<script setup>
-import NavigationBar from "@/components/NavigationBar.vue";
-import { post } from "@/services/quickFetch";
-import VueDatePicker from "@vuepic/vue-datepicker";
-import "@vuepic/vue-datepicker/dist/main.css";
-const settingsStore = useSettingsStore();
-</script>
-
 <template>
   <div class="container">
     <NavigationBar />
@@ -238,9 +230,15 @@ const settingsStore = useSettingsStore();
   </div>
 </template>
 
-<script>
+<script setup>
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Line } from "vue-chartjs";
+import NavigationBar from "@/components/NavigationBar.vue";
+import { post } from "@/services/quickFetch";
+import VueDatePicker from "@vuepic/vue-datepicker";
+import "@vuepic/vue-datepicker/dist/main.css";
+const settingsStore = useSettingsStore();
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -251,6 +249,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { computed, onMounted, ref } from "vue";
 
 ChartJS.register(
   CategoryScale,
@@ -262,115 +261,110 @@ ChartJS.register(
   Legend
 );
 
-export default {
-  data() {
-    return {
-      langGroups: [],
-      langiso: undefined,
-      dateRange: undefined,
-      statistics: undefined,
-      loading: false,
-      page: 0,
-      levenshteinChartData: {
-        labels: [],
-        datasets: [],
-      },
-      secondsChartData: {
-        labels: [],
-        datasets: [],
-      },
-      chartOptions: {
-        responsive: true,
-        spanGaps: true,
-        maintainAspectRatio: false,
-      },
-      grouping: "daily",
-      ignoredGroupTypes: ["person"],
-    };
-  },
-  components: { Line },
-  async mounted() {
-    const settingsStore = useSettingsStore();
-    this.langiso = settingsStore.selectedLanguage.langiso;
-    this.langGroups = settingsStore.selectedLanguage.groups;
-    for (let i = 0; i < this.langGroups.length; i++) {
-      let group = this.langGroups[i];
-      for (let j = 0; j < group.tags.length; j++) {
-        let segment = group.tags[j];
-        segment.checked = true;
+const langGroups = ref([]);
+const langiso = ref(undefined);
+const dateRange = ref(undefined);
+const statistics = ref(undefined);
+const loading = ref(false);
+const page = ref(0);
+const levenshteinChartData = ref({
+  labels: [],
+  datasets: [],
+});
+const secondsChartData = ref({
+  labels: [],
+  datasets: [],
+});
+const chartOptions = ref({
+  responsive: true,
+  spanGaps: true,
+  maintainAspectRatio: false,
+});
+const grouping = ref("daily");
+const ignoredGroupTypes = ref(["person"]);
+
+onMounted(() => {
+  const settingsStore = useSettingsStore();
+  langiso.value = settingsStore.selectedLanguage.langiso;
+  langGroups.value = settingsStore.selectedLanguage.groups;
+  for (let i = 0; i < langGroups.value.length; i++) {
+    let group = langGroups.value[i];
+    for (let j = 0; j < group.tags.length; j++) {
+      let segment = group.tags[j];
+      segment.checked = true;
+    }
+  }
+});
+
+function getSelectedTags() {
+  let res = [];
+  for (let i = 0; i < langGroups.value.length; i++) {
+    let group = langGroups.value[i];
+    for (let j = 0; j < group.tags.length; j++) {
+      let segment = group.tags[j];
+      if (segment.checked) {
+        res.push(segment.id);
       }
     }
-  },
-  methods: {
-    getSelectedTags() {
-      let res = [];
-      for (let i = 0; i < this.langGroups.length; i++) {
-        let group = this.langGroups[i];
-        for (let j = 0; j < group.tags.length; j++) {
-          let segment = group.tags[j];
-          if (segment.checked) {
-            res.push(segment.id);
-          }
-        }
-      }
-      return res;
-    },
-    setPage(delta) {
-      this.page += delta;
-      this.refresh();
-    },
-    async refreshButton() {
-      this.page = 0;
-      this.refresh();
-    },
-    async refresh() {
-      let settingsStore = useSettingsStore();
-      this.loading = true;
-      let res = await post("/api/stats/get_statistics", {
-        dateRange: this.dateRange,
-        attributes: this.getSelectedTags(),
-        page: this.page,
-        langiso: this.langiso,
-        displayLangiso: settingsStore.langiso,
-        grouping: this.grouping,
-        ignoredGroupTypes: this.ignoredGroupTypes,
-      });
-      if (res.status == 200) {
-        this.statistics = res.body;
-        this.levenshteinChartData = {
-          labels: this.statistics.graphData.labels,
-          datasets: this.statistics.graphData.dataSets.levenshtein,
-        };
-        this.secondsChartData = {
-          labels: this.statistics.graphData.labels,
-          datasets: this.statistics.graphData.dataSets.seconds,
-        };
-        console.log(this.statistics);
-      }
-      this.loading = false;
-    },
-    toggleIngoreGroupType(type) {
-      if (!this.ignoredGroupTypes.includes(type)) {
-        this.ignoredGroupTypes.push(type);
-      } else {
-        this.ignoredGroupTypes.splice(this.ignoredGroupTypes.indexOf(type), 1);
-      }
-    },
-  },
-  computed: {
-    levenshteinTextClass: (state) => (val) => {
-      if (val == 0) return "text-success";
-      if (val == 0.5) return "text-warning";
-      return "text-danger";
-    },
-    statisticsExist: (state) => {
-      return (
-        state.statistics && state.statistics?.graphData?.labels?.length > 0
-      );
-    },
-    ignoredGroupTypeChecked: (state) => (type) => {
-      return state.ignoredGroupTypes.includes(type);
-    },
-  },
-};
+  }
+  return res;
+}
+
+function setPage(delta) {
+  page.value += delta;
+  refresh();
+}
+
+async function refreshButton() {
+  page.value = 0;
+  refresh();
+}
+
+async function refresh() {
+  let settingsStore = useSettingsStore();
+  loading.value = true;
+  let res = await post("/api/stats/get_statistics", {
+    dateRange: dateRange.value,
+    attributes: getSelectedTags(),
+    page: page.value,
+    langiso: langiso.value,
+    displayLangiso: settingsStore.langiso,
+    grouping: grouping.value,
+    ignoredGroupTypes: ignoredGroupTypes.value,
+  });
+  if (res.status == 200) {
+    statistics.value = res.body;
+    levenshteinChartData.value = {
+      labels: statistics.value.graphData.labels,
+      datasets: statistics.value.graphData.dataSets.levenshtein,
+    };
+    secondsChartData.value = {
+      labels: statistics.value.graphData.labels,
+      datasets: statistics.value.graphData.dataSets.seconds,
+    };
+  }
+  loading.value = false;
+}
+
+function toggleIngoreGroupType(type) {
+  if (!ignoredGroupTypes.value.includes(type)) {
+    ignoredGroupTypes.value.push(type);
+  } else {
+    ignoredGroupTypes.value.splice(ignoredGroupTypes.value.indexOf(type), 1);
+  }
+}
+
+const levenshteinTextClass = computed(() => (val) => {
+  if (val == 0) return "text-success";
+  if (val == 0.5) return "text-warning";
+  return "text-danger";
+});
+
+const statisticsExist = computed(
+  () => statistics.value && statistics.value?.graphData?.labels?.length > 0
+);
+
+const ignoredGroupTypeChecked = computed(
+  () => (type) => ignoredGroupTypes.value.includes(type)
+);
 </script>

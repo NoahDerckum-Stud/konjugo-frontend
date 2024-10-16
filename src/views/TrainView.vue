@@ -1,8 +1,180 @@
 <script setup>
 import AsyncContainer from "@/components/AsyncContainer.vue";
-import { getTypeMeta } from "@/services/attributeParser.js";
+import {
+  getTypeMeta,
+  getPreview,
+  getTagTitle,
+} from "@/services/attributeParser.js";
+import { useTrainSettingsStore } from "@/stores/trainSettingsStore.js";
+import { post } from "@/services/quickFetch";
+import { computed, onMounted, ref, toRaw } from "vue";
+import { bakedComparision } from "../services/levenshteinAlgorithm.js";
+import correctAnim from "../assets/svg/correctAnim.json";
+import wrongAnim from "../assets/svg/wrongAnim.json";
+import warningAnim from "../assets/svg/warningAnim.json";
+import { useSettingsStore } from "@/stores/settingsStore.js";
 
+const selectedLanguage = ref(undefined);
+const challanges = ref(undefined);
+const currentChallange = ref(0);
+const currentSeconds = ref(0);
+const currentInput = ref("");
+const secondTimer = ref(undefined);
+const currentResult = ref(undefined);
+const currentAnim = ref(undefined);
+const statistics = ref([]);
+const summary = ref(undefined);
+const statisticsPosted = ref(false);
+const inputField = ref(null);
 const settingsStore = useSettingsStore();
+const trainSettingsStore = useTrainSettingsStore();
+
+onMounted(async () => {
+  window.addEventListener("keydown", handleEnter);
+  startTimer();
+  let challangesRes = await post(
+    "/api/train/start_challange",
+    trainSettingsStore.settings
+  );
+  if (challangesRes.status == 200) {
+    challanges.value = challangesRes.body;
+  }
+
+  const settingsStore = useSettingsStore();
+
+  selectedLanguage.value = settingsStore.selectedLanguage;
+
+  if (challanges.value?.length == 0) {
+    summary.value = generateSummary();
+  }
+});
+
+function startTimer() {
+  secondTimer.value = setInterval(() => {
+    currentSeconds.value++;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(secondTimer.value);
+}
+
+function checkResult() {
+  currentResult.value = {
+    input: currentInput.value,
+    exptected: challanges.value[currentChallange.value].flection,
+    ...bakedComparision(
+      challanges.value[currentChallange.value].flection,
+      currentInput.value
+    ),
+  };
+
+  if (currentResult.value.levenshteinDistance == 0) {
+    currentAnim.value = correctAnim;
+  } else if (currentResult.value.levenshteinDistance < 1) {
+    currentAnim.value = warningAnim;
+  } else {
+    currentAnim.value = wrongAnim;
+  }
+
+  let statistic = {
+    langiso: selectedLanguage.value.langiso,
+    lemma: challanges.value[currentChallange.value].lemma,
+    tags: toRaw(challanges.value[currentChallange.value].tags),
+    timestamp: new Date(),
+    seconds: currentSeconds.value,
+    levenshtein: currentResult.value.levenshteinDistance,
+  };
+  statistics.value.push(statistic);
+  console.log(statistic);
+}
+
+function generateSummary() {
+  let statisticCount = statistics.value.length;
+  let levenshteinSum = 0;
+  let secondsSum = 0;
+  let correctSum = 0;
+
+  for (let i = 0; i < statisticCount; i++) {
+    let statistic = statistics.value[i];
+    if (statistic.levenshtein == 0) {
+      correctSum++;
+    }
+    levenshteinSum += statistic.levenshtein;
+    secondsSum += statistic.seconds;
+  }
+
+  return {
+    levenshteinSum: levenshteinSum,
+    averageTime: secondsSum / statisticCount,
+    correctSum: correctSum,
+  };
+}
+
+function continueButton() {
+  if (currentResult.value) {
+    if (currentChallange.value == challanges.value.length - 1) {
+      summary.value = generateSummary();
+      postStatistics();
+    } else {
+      currentResult.value = undefined;
+      currentAnim.value = undefined;
+      currentInput.value = "";
+      currentSeconds.value = 0;
+      currentChallange.value++;
+      setTimeout(() => {
+        if (inputField.value) inputField.value.focus();
+      }, 100);
+      startTimer();
+    }
+  } else if (currentInput.value) {
+    checkResult();
+    stopTimer();
+  }
+}
+
+function handleEnter(event) {
+  if (event.key === "Enter") continueButton();
+}
+
+async function postStatistics() {
+  if (statisticsPosted.value) return;
+
+  await post("/api/stats/statistics", {
+    statistics: statistics.value,
+  });
+  statisticsPosted.value = true;
+}
+
+const formatTime = computed(() => {
+  const seconds = currentSeconds.value;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  const formattedMinutes = String(minutes).padStart(2, "0");
+  const formattedSeconds = String(remainingSeconds).padStart(2, "0");
+
+  return `${formattedMinutes}:${formattedSeconds}`;
+});
+
+const getResultCharClass = computed(() => (role) => {
+  switch (role) {
+    case "normal":
+      return "";
+      break;
+    case "insertion":
+      return "text-secondary text-decoration-line-through";
+      break;
+    case "deletion":
+      return "text-danger";
+      break;
+    case "substitution":
+      return "text-primary";
+      break;
+  }
+  return "";
+});
 </script>
 
 <template>
@@ -44,7 +216,7 @@ const settingsStore = useSettingsStore();
               v-for="tag in challanges[currentChallange].tags"
             >
               <span class="badge bg-secondary rounded-pill bg-success">{{
-                getAttributeTitle(tag, settingsStore.langiso)
+                getTagTitle(selectedLanguage, tag, settingsStore.langiso)
               }}</span>
             </h2>
           </div>
@@ -75,7 +247,12 @@ const settingsStore = useSettingsStore();
                 v-model="currentInput"
                 type="text"
                 class="text-center input-field w-100"
-                :placeholder="getPreview(challanges[currentChallange].tags)"
+                :placeholder="
+                  getPreview(
+                    selectedLanguage,
+                    challanges[currentChallange].tags
+                  )
+                "
                 style="font-size: 2rem"
                 ref="inputField"
               />
@@ -182,211 +359,6 @@ const settingsStore = useSettingsStore();
     </template>
   </AsyncContainer>
 </template>
-
-<script>
-import { useTrainSettingsStore } from "@/stores/trainSettingsStore.js";
-import { post } from "@/services/quickFetch";
-import { toRaw } from "vue";
-import { bakedComparision } from "../services/levenshteinAlgorithm.js";
-import correctAnim from "../assets/svg/correctAnim.json";
-import wrongAnim from "../assets/svg/wrongAnim.json";
-import warningAnim from "../assets/svg/warningAnim.json";
-import { useSettingsStore } from "@/stores/settingsStore.js";
-
-export default {
-  data() {
-    return {
-      selectedLanguage: undefined,
-      challanges: undefined,
-      currentChallange: 0,
-      currentSeconds: 0,
-      currentInput: "",
-      secondTimer: undefined,
-      currentResult: undefined,
-      correctAnim,
-      wrongAnim,
-      warningAnim,
-      currentAnim: undefined,
-      statistics: [],
-      summary: undefined,
-      statisticsPosted: false,
-    };
-  },
-  methods: {
-    startTimer() {
-      this.secondTimer = setInterval(() => {
-        this.currentSeconds++;
-      }, 1000);
-    },
-    stopTimer() {
-      clearInterval(this.secondTimer);
-    },
-    checkResult() {
-      this.currentResult = {
-        input: this.currentInput,
-        exptected: this.challanges[this.currentChallange].flection,
-        ...bakedComparision(
-          this.challanges[this.currentChallange].flection,
-          this.currentInput
-        ),
-      };
-
-      if (this.currentResult.levenshteinDistance == 0) {
-        this.currentAnim = this.correctAnim;
-      } else if (this.currentResult.levenshteinDistance < 1) {
-        this.currentAnim = this.warningAnim;
-      } else {
-        this.currentAnim = this.wrongAnim;
-      }
-
-      let statistic = {
-        langiso: this.selectedLanguage.langiso,
-        lemma: this.challanges[this.currentChallange].lemma,
-        tags: toRaw(this.challanges[this.currentChallange].tags),
-        timestamp: new Date(),
-        seconds: this.currentSeconds,
-        levenshtein: this.currentResult.levenshteinDistance,
-      };
-      this.statistics.push(statistic);
-      console.log(statistic);
-    },
-    generateSummary() {
-      let statisticCount = this.statistics.length;
-      let levenshteinSum = 0;
-      let secondsSum = 0;
-      let correctSum = 0;
-
-      for (let i = 0; i < statisticCount; i++) {
-        let statistic = this.statistics[i];
-        if (statistic.levenshtein == 0) {
-          correctSum++;
-        }
-        levenshteinSum += statistic.levenshtein;
-        secondsSum += statistic.seconds;
-      }
-
-      return {
-        levenshteinSum: levenshteinSum,
-        averageTime: secondsSum / statisticCount,
-        correctSum: correctSum,
-      };
-    },
-    continueButton() {
-      if (this.currentResult) {
-        if (this.currentChallange == this.challanges.length - 1) {
-          this.summary = this.generateSummary();
-          this.postStatistics();
-        } else {
-          this.currentResult = undefined;
-          this.currentAnim = undefined;
-          this.currentInput = "";
-          this.currentSeconds = 0;
-          this.currentChallange++;
-          setTimeout(() => {
-            if (this.$refs.inputField) this.$refs.inputField.focus();
-          }, 100);
-          this.startTimer();
-        }
-      } else if (this.currentInput) {
-        this.checkResult();
-        this.stopTimer();
-      }
-    },
-    handleEnter(event) {
-      if (event.key === "Enter") this.continueButton();
-    },
-    async postStatistics() {
-      if (this.statisticsPosted) return;
-
-      await post("/api/stats/statistics", {
-        statistics: this.statistics,
-      });
-      this.statisticsPosted = true;
-    },
-  },
-  async mounted() {
-    window.addEventListener("keydown", this.handleEnter);
-    this.startTimer();
-    const trainSettingsStore = useTrainSettingsStore();
-    let challangesRes = await post(
-      "/api/train/start_challange",
-      trainSettingsStore.settings
-    );
-    if (challangesRes.status == 200) {
-      this.challanges = challangesRes.body;
-    }
-
-    const settingsStore = useSettingsStore();
-
-    this.selectedLanguage = settingsStore.selectedLanguage;
-
-    if (this.challanges?.length == 0) {
-      this.summary = this.generateSummary();
-    }
-  },
-  computed: {
-    getAttributeTitle: (state) => (attribute, lang) => {
-      if (!state.selectedLanguage) return undefined;
-
-      for (let i = 0; i < state.selectedLanguage.groups.length; i++) {
-        let currentGroup = state.selectedLanguage.groups[i];
-        for (let j = 0; j < currentGroup.tags.length; j++) {
-          let currentSegment = currentGroup.tags[j];
-          if (currentSegment.id == attribute) {
-            return currentSegment.title[lang];
-          }
-        }
-      }
-      return undefined;
-    },
-    getPreview: (state) => (attributes) => {
-      if (!state.selectedLanguage) return undefined;
-
-      for (let i = 0; i < state.selectedLanguage.groups.length; i++) {
-        let currentGroup = state.selectedLanguage.groups[i];
-        for (let j = 0; j < currentGroup.tags.length; j++) {
-          let currentSegment = currentGroup.tags[j];
-          if (
-            currentSegment.preview &&
-            attributes.includes(currentSegment.tag)
-          ) {
-            return currentSegment.preview;
-          }
-        }
-      }
-      return undefined;
-    },
-    formatTime: (state) => {
-      const seconds = state.currentSeconds;
-
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-
-      const formattedMinutes = String(minutes).padStart(2, "0");
-      const formattedSeconds = String(remainingSeconds).padStart(2, "0");
-
-      return `${formattedMinutes}:${formattedSeconds}`;
-    },
-    getResultCharClass: (state) => (role) => {
-      switch (role) {
-        case "normal":
-          return "";
-          break;
-        case "insertion":
-          return "text-secondary text-decoration-line-through";
-          break;
-        case "deletion":
-          return "text-danger";
-          break;
-        case "substitution":
-          return "text-primary";
-          break;
-      }
-      return "";
-    },
-  },
-};
-</script>
 
 <style>
 .input-field {

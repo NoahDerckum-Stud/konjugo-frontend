@@ -2,7 +2,140 @@
 import NavigationBar from "../components/NavigationBar.vue";
 import AsyncContainer from "../components/AsyncContainer.vue";
 import { getTypeMeta } from "@/services/attributeParser";
+import { computed, onMounted, ref, toRaw, useTemplateRef } from "vue";
+import { post } from "../services/quickFetch.js";
+import { useTrainSettingsStore } from "@/stores/trainSettingsStore";
+import { Modal } from "bootstrap";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { useRouter } from "vue-router";
+
 const settingsStore = useSettingsStore();
+const router = useRouter();
+
+const selectedLanguage = ref(undefined);
+const lemmaInput = ref("");
+const samplesInput = ref(30);
+const previewLemmas = ref([]);
+const selectedLemmas = ref([]);
+const bootstrapCollectionModal = ref(undefined);
+const collectionModal = ref(null);
+const lemmaCollections = ref(undefined);
+const samplesPreviews = ref([10, 20, 35, 50, 100]);
+
+onMounted(() => {
+  selectedLanguage.value = settingsStore.selectedLanguage;
+  bootstrapCollectionModal.value = new Modal(collectionModal.value);
+  initSelection();
+});
+
+function initSelection() {
+  if (selectedLanguage?.value.groups?.length > 0) {
+    for (let i = 0; i < selectedLanguage.value.groups.length; i++) {
+      if (selectedLanguage.value.groups[i].type == "person")
+        for (let j = 0; j < selectedLanguage.value.groups[i].tags.length; j++) {
+          selectedLanguage.value.groups[i].tags[j].checked = true;
+        }
+    }
+  }
+}
+
+async function lemmaInputChanged(event) {
+  if (event.target.value?.length >= 2) {
+    let res = await post("/api/train/lemma_preview", {
+      langiso: selectedLanguage.value.langiso,
+      lemma: event.target.value?.toLowerCase(),
+    });
+    previewLemmas.value = res.body;
+    console.log(res.body);
+  } else {
+    previewLemmas.value = [];
+  }
+}
+
+function addLemma(lemma) {
+  selectedLemmas.value.push(lemma);
+  lemmaInput.value = "";
+  previewLemmas.value = [];
+}
+
+function removeLemmaFromSelected(lemma) {
+  for (let i = 0; i < selectedLemmas.value.length; i++) {
+    if (
+      selectedLemmas.value[i]?.lemma.toLowerCase() === lemma.lemma.toLowerCase()
+    ) {
+      selectedLemmas.value.splice(i, 1);
+      i--;
+    }
+  }
+}
+function removeAllSelectedLemmas() {
+  selectedLemmas.value = [];
+}
+
+function startLearningSession() {
+  let lemmas = [];
+  let tags = generateTagList();
+
+  for (let lemma of selectedLemmas.value) {
+    lemmas.push(lemma.lemma);
+  }
+
+  const trainSettings = {
+    lemmas: lemmas,
+    langiso: selectedLanguage.value.langiso,
+    tags: tags,
+    samples: samplesInput.value,
+  };
+
+  const trainSettingsStore = useTrainSettingsStore();
+  trainSettingsStore.settings = trainSettings;
+
+  router.push("/train");
+}
+
+function generateTagList() {
+  let tags = [];
+  let groups = selectedLanguage.value.groups;
+  for (let i = 0; i < groups.length; i++) {
+    for (let j = 0; j < groups[i].tags.length; j++) {
+      if (groups[i].tags[j].checked == true) {
+        tags.push(groups[i].tags[j].id);
+      }
+    }
+  }
+  return tags;
+}
+async function fetchLemmaCollections() {
+  let result = await post("/api/train/get_lemma_collections", {
+    langiso: selectedLanguage.value.langiso,
+  });
+  if (result.status == 200) {
+    lemmaCollections.value = result.body;
+  }
+}
+
+const blockStartButton = computed(() => {
+  let lemmas = toRaw(selectedLemmas);
+  let tags = generateTagList();
+  console.log(lemmas, tags);
+  if (lemmas.length == 0 || tags.length == 0) return true;
+
+  return false;
+});
+
+const showGroup = computed(() => (type) => {
+  let tag = "";
+  if (type == "person" || type == "tense") {
+    tag = "V";
+  }
+  if (type == "adjective") {
+    tag = "ADJ";
+  }
+  if (type == "substantive") {
+    tag = "N";
+  }
+  return selectedLemmas.value.some((obj) => obj.type === tag);
+});
 </script>
 
 <template>
@@ -34,7 +167,7 @@ const settingsStore = useSettingsStore();
                   @click="
                     () => {
                       fetchLemmaCollections();
-                      collectionModal.show();
+                      bootstrapCollectionModal.show();
                     }
                   "
                 >
@@ -200,8 +333,8 @@ const settingsStore = useSettingsStore();
                 style="width: 18rem"
                 @click="
                   () => {
-                    collectionModal.hide();
-                    this.selectedLemmas = collection.lemmas;
+                    bootstrapCollectionModal.hide();
+                    selectedLemmas = collection.lemmas;
                   }
                 "
               >
@@ -241,149 +374,3 @@ const settingsStore = useSettingsStore();
   cursor: pointer;
 }
 </style>
-
-<script>
-import { post } from "../services/quickFetch.js";
-import { toRaw } from "vue";
-import { useTrainSettingsStore } from "@/stores/trainSettingsStore";
-import {
-  bakedComparision,
-  compareStrings,
-  generateDiffArray,
-} from "@/services/levenshteinAlgorithm";
-import { Modal } from "bootstrap";
-import { useSettingsStore } from "@/stores/settingsStore";
-
-export default {
-  data() {
-    return {
-      selectedLanguage: undefined,
-      lemmaInput: "",
-      samplesInput: 30,
-      previewLemmas: [],
-      selectedLemmas: [],
-      collectionModal: undefined,
-      lemmaCollections: undefined,
-      samplesPreviews: [10, 20, 35, 50, 100],
-    };
-  },
-  async mounted() {
-    const settingsStore = useSettingsStore();
-    this.selectedLanguage = settingsStore.selectedLanguage;
-    this.collectionModal = new Modal(this.$refs.collectionModal);
-    this.initSelection();
-  },
-  methods: {
-    initSelection() {
-      if (this.selectedLanguage?.groups?.length > 0) {
-        for (let i = 0; i < this.selectedLanguage.groups.length; i++) {
-          if (this.selectedLanguage.groups[i].type == "person")
-            for (
-              let j = 0;
-              j < this.selectedLanguage.groups[i].tags.length;
-              j++
-            ) {
-              this.selectedLanguage.groups[i].tags[j].checked = true;
-            }
-        }
-        console.log(this.selectedLanguage);
-      }
-    },
-    async lemmaInputChanged(event) {
-      if (event.target.value?.length >= 2) {
-        let res = await post("/api/train/lemma_preview", {
-          langiso: this.selectedLanguage.langiso,
-          lemma: event.target.value?.toLowerCase(),
-        });
-        this.previewLemmas = res.body;
-        console.log(res.body);
-      } else {
-        this.previewLemmas = [];
-      }
-    },
-    addLemma(lemma) {
-      this.selectedLemmas.push(lemma);
-      this.lemmaInput = "";
-      this.previewLemmas = [];
-    },
-    removeLemmaFromSelected(lemma) {
-      for (let i = 0; i < this.selectedLemmas.length; i++) {
-        if (
-          this.selectedLemmas[i]?.lemma.toLowerCase() ===
-          lemma.lemma.toLowerCase()
-        ) {
-          this.selectedLemmas.splice(i, 1);
-          i--;
-        }
-      }
-    },
-    removeAllSelectedLemmas() {
-      this.selectedLemmas = [];
-    },
-    startLearningSession() {
-      let lemmas = [];
-      let tags = this.generateTagList();
-
-      for (let lemma of this.selectedLemmas) {
-        lemmas.push(lemma.lemma);
-      }
-
-      const trainSettings = {
-        lemmas: lemmas,
-        langiso: this.selectedLanguage.langiso,
-        tags: tags,
-        samples: this.samplesInput,
-      };
-
-      const trainSettingsStore = useTrainSettingsStore();
-      trainSettingsStore.settings = trainSettings;
-
-      this.$router.push("/train");
-    },
-    generateTagList() {
-      let tags = [];
-      let groups = this.selectedLanguage.groups;
-      for (let i = 0; i < groups.length; i++) {
-        for (let j = 0; j < groups[i].tags.length; j++) {
-          if (groups[i].tags[j].checked == true) {
-            tags.push(groups[i].tags[j].id);
-          }
-        }
-      }
-      return tags;
-    },
-    async fetchLemmaCollections() {
-      let result = await post("/api/train/get_lemma_collections", {
-        langiso: this.selectedLanguage.langiso,
-      });
-      if (result.status == 200) {
-        this.lemmaCollections = result.body;
-      }
-    },
-  },
-  computed: {
-    blockStartButton: (state) => {
-      let lemmas = toRaw(state.selectedLemmas);
-      let tags = state.generateTagList();
-      console.log(lemmas, tags);
-      if (lemmas.length == 0 || tags.length == 0) return true;
-
-      return false;
-    },
-    getTypeMeta,
-    showGroup: (state) => (type) => {
-      let tag = "";
-      if (type == "person" || type == "tense") {
-        tag = "V";
-      }
-      if (type == "adjective") {
-        tag = "ADJ";
-      }
-      if (type == "substantive") {
-        tag = "N";
-      }
-      return state.selectedLemmas.some((obj) => obj.type === tag);
-    },
-  },
-};
-</script>

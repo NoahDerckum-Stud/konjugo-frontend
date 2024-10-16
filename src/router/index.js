@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import WelcomePage from "../views/LoginView.vue";
-import SelectLangPage from "../views/SelectLanguage.vue";
+import SelectLangPage from "../views/LanguageSelection.vue";
 import DashboardView from "../views/MenuView.vue";
 import InitTrainView from "../views/InitTrainView.vue";
 import TrainView from "../views/TrainView.vue";

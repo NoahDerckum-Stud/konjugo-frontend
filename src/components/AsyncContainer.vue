@@ -11,8 +11,6 @@
   </template>
 </template>
 
-<script>
-export default {
-  props: ["asyncValue"],
-};
+<script setup>
+defineProps(["asyncValue"]);
 </script>

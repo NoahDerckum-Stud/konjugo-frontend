@@ -45,7 +45,3 @@ const settingsStore = useSettingsStore();
     </div>
   </div>
 </template>
-
-<script>
-export default {};
-</script>

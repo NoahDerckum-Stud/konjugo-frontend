@@ -1,7 +1,69 @@
 <script setup>
 import AsyncContainer from "@/components/AsyncContainer.vue";
 import NavigationBar from "@/components/NavigationBar.vue";
+import { post } from "@/services/quickFetch";
+import { getTagTitle } from "../services/attributeParser.js";
+import {
+  bakedComparision,
+  getResultCharClass,
+} from "@/services/levenshteinAlgorithm.js";
+import { useSettingsStore } from "@/stores/settingsStore.js";
+import { computed, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+
+const settingsStore = useSettingsStore();
+const selectedLanguage = ref(undefined);
+const fetchedStory = ref(undefined);
+const focusedElement = ref(undefined);
+const inputs = ref({});
+const state = ref("edit");
+const route = useRoute();
+const router = useRouter();
+
+onMounted(async () => {
+  let storyResult = await post("/api/stories/get_story", {
+    id: route.query.id,
+  });
+  if (storyResult.status == 200) {
+    fetchedStory.value = storyResult.body;
+  }
+
+  const settingsStore = useSettingsStore();
+  selectedLanguage.value = settingsStore.selectedLanguage;
+});
+
+function onFocus(element, placeholderPos, textPos) {
+  focusedElement.value = { element, placeholderPos, textPos };
+}
+function onFocusLost() {
+  focusedElement.value = undefined;
+}
+function finishButton() {
+  if (state.value == "edit") {
+    checkResult();
+  } else {
+    router.push("/storylib");
+  }
+}
+function checkResult() {
+  for (let i = 0; i < fetchedStory.value.text.length; i++) {
+    let word = fetchedStory.value.text[i];
+    if (Number.isFinite(word)) {
+      let input = inputs.value[word];
+      let expected = fetchedStory.value.placeholders[word].flection;
+      let result = bakedComparision(expected, input ? input : "");
+      fetchedStory.value.text[i] = result;
+      console.log(expected, result);
+    }
+  }
+  state.value = "done";
+}
+
+const tagTitle = computed(
+  () => (tag) => getTagTitle(selectedLanguage.value, tag, settingsStore.langiso)
+);
 </script>
+
 <template>
   <AsyncContainer :asyncValue="fetchedStory">
     <div class="container">
@@ -65,77 +127,6 @@ import NavigationBar from "@/components/NavigationBar.vue";
     </div>
   </AsyncContainer>
 </template>
-
-<script>
-import { post } from "@/services/quickFetch";
-import { getTagTitle } from "../services/attributeParser.js";
-import {
-  bakedComparision,
-  getResultCharClass,
-} from "@/services/levenshteinAlgorithm.js";
-import { useSettingsStore } from "@/stores/settingsStore.js";
-
-export default {
-  data() {
-    return {
-      selectedLanguage: undefined,
-      fetchedStory: undefined,
-      focusedElement: undefined,
-      inputs: {},
-      state: "edit",
-    };
-  },
-  async mounted() {
-    let storyResult = await post("/api/stories/get_story", {
-      id: this.$route.query.id,
-    });
-    if (storyResult.status == 200) {
-      this.fetchedStory = storyResult.body;
-    }
-
-    const settingsStore = useSettingsStore();
-    this.selectedLanguage = settingsStore.selectedLanguage;
-  },
-  methods: {
-    onFocus(element, placeholderPos, textPos) {
-      this.focusedElement = { element, placeholderPos, textPos };
-    },
-    onFocusLost() {
-      this.focusedElement = undefined;
-    },
-    finishButton() {
-      if (this.state == "edit") {
-        this.checkResult();
-      } else {
-        this.$router.push("/storylib");
-      }
-    },
-    checkResult() {
-      for (let i = 0; i < this.fetchedStory.text.length; i++) {
-        let word = this.fetchedStory.text[i];
-        if (Number.isFinite(word)) {
-          let input = this.inputs[word];
-          let expected = this.fetchedStory.placeholders[word].flection;
-          let result = bakedComparision(expected, input ? input : "");
-          this.fetchedStory.text[i] = result;
-          console.log(expected, result);
-        }
-      }
-      this.state = "done";
-    },
-  },
-  computed: {
-    tagTitle: (state) => (tag) => {
-      const settingsStore = useSettingsStore();
-      return getTagTitle(state.selectedLanguage, tag, settingsStore.langiso);
-    },
-    getResultCharClass: (state) => (type) => {
-      return getResultCharClass(type);
-    },
-  },
-  watch: {},
-};
-</script>
 
 <style scoped lang="scss">
 input {

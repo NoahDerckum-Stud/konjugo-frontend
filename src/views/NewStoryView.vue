@@ -1,5 +1,49 @@
 <script setup>
 import NavigationBar from "@/components/NavigationBar.vue";
+import { post } from "@/services/quickFetch";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+
+const settingsStore = useSettingsStore();
+const storyInput = ref("");
+const titleInput = ref("");
+const descriptionInput = ref("");
+const storyPosting = ref(false);
+const types = ref(["V", "ADJ", "N"]);
+const router = useRouter();
+
+async function postStory() {
+  storyPosting.value = true;
+  await post("/api/stories/story", {
+    title: titleInput.value,
+    description: descriptionInput.value,
+    story: storyInput.value,
+    langiso: settingsStore.selectedLanguage.langiso,
+    types: types.value,
+  });
+  router.push("/storylib");
+  storyPosting.value = false;
+}
+
+function toggleTypes(val) {
+  if (!types.value.includes(val)) {
+    types.value.push(val);
+  } else {
+    types.value.splice(types.value.indexOf(val), 1);
+  }
+}
+
+const mayPostStory = computed(
+  () =>
+    titleInput.value.length > 5 &&
+    descriptionInput.value.length > 5 &&
+    storyInput.value.length > 20
+);
+
+const typeChecked = computed(() => (type) => {
+  return types.value.includes(type);
+});
 </script>
 
 <template>
@@ -74,53 +118,3 @@ import NavigationBar from "@/components/NavigationBar.vue";
     </div>
   </div>
 </template>
-
-<script>
-import { post } from "@/services/quickFetch";
-import { useSettingsStore } from "@/stores/settingsStore";
-export default {
-  data() {
-    return {
-      storyInput: "",
-      titleInput: "",
-      descriptionInput: "",
-      storyPosting: false,
-      types: ["V", "ADJ", "N"],
-    };
-  },
-  methods: {
-    async postStory() {
-      const settingsStore = useSettingsStore();
-      this.storyPosting = true;
-      let res = await post("/api/stories/story", {
-        title: this.titleInput,
-        description: this.descriptionInput,
-        story: this.storyInput,
-        langiso: settingsStore.selectedLanguage.langiso,
-        types: this.types,
-      });
-      this.$router.push("/storylib");
-      this.storyPosting = false;
-    },
-    toggleTypes(val) {
-      if (!this.types.includes(val)) {
-        this.types.push(val);
-      } else {
-        this.types.splice(this.types.indexOf(val), 1);
-      }
-    },
-  },
-  computed: {
-    mayPostStory: (state) => {
-      return (
-        state.titleInput.length > 5 &&
-        state.descriptionInput.length > 5 &&
-        state.storyInput.length > 20
-      );
-    },
-    typeChecked: (state) => (type) => {
-      return state.types.includes(type);
-    },
-  },
-};
-</script>

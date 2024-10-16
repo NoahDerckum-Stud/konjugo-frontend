@@ -2,7 +2,81 @@
 import NavigationBar from "@/components/NavigationBar.vue";
 import { get, del, put, post } from "@/services/quickFetch";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 const settingsStore = useSettingsStore();
+
+const usernameInput = ref("");
+const tmpUsernameInput = ref("");
+const mailInput = ref("");
+const tmpMailInput = ref("");
+const passwordInput = ref("");
+const passwordRepeatInput = ref("");
+const nativeTitles = ref(false);
+const overallMessage = ref("");
+const passwordErrorMessage = ref("");
+const passwordSuccessMessage = ref("");
+const router = useRouter();
+
+onMounted(async () => {
+  let profile = await get("/api/profile/profile_info");
+  usernameInput.value = profile.body.username;
+  tmpUsernameInput.value = profile.body.username;
+  mailInput.value = profile.body.mail;
+  tmpMailInput.value = profile.body.mail;
+});
+
+async function updateUsername() {
+  let res = await put("/api/profile/username", {
+    username: usernameInput.value,
+  });
+  if (res.status == 200) {
+    tmpUsernameInput.value = usernameInput.value;
+    overallMessage.value = "";
+  } else {
+    overallMessage.value = res?.body.message;
+  }
+}
+
+async function updateMail() {
+  let res = await put("/api/profile/mail", {
+    mail: mailInput.value,
+  });
+  if (res.status == 200) {
+    tmpMailInput.value = mailInput.value;
+    overallMessage.value = "";
+  } else {
+    overallMessage.value = res?.body.message;
+  }
+}
+
+async function updatePassword() {
+  let res = await put("/api/profile/password", {
+    password: passwordInput.value,
+  });
+  if (res.status == 200) {
+    passwordMessage.value = "";
+    passwordSuccessMessage.value = "Password updated";
+    passwordInput.value = "";
+    passwordRepeatInput.value = "";
+  } else {
+    passwordErrorMessage.value = res?.body.message;
+  }
+}
+
+async function deleteProfile() {
+  let res = await del("/api/profile/user");
+  if (res.status == 200) {
+    router.push("/");
+  }
+}
+
+async function logout() {
+  let res = await post("/api/auth/logout");
+  if (res.status == 200) {
+    router.push("/");
+  }
+}
 </script>
 
 <template>
@@ -104,78 +178,3 @@ const settingsStore = useSettingsStore();
     </div>
   </div>
 </template>
-
-<script>
-export default {
-  data() {
-    return {
-      usernameInput: "",
-      tmpUsernameInput: "",
-      mailInput: "",
-      tmpMailInput: "",
-      passwordInput: "",
-      passwordRepeatInput: "",
-      nativeTitles: false,
-      overallMessage: "",
-      passwordErrorMessage: "",
-      passwordSuccessMessage: "",
-    };
-  },
-  async mounted() {
-    let profile = await get("/api/profile/profile_info");
-    this.usernameInput = profile.body.username;
-    this.tmpUsernameInput = profile.body.username;
-    this.mailInput = profile.body.mail;
-    this.tmpMailInput = profile.body.mail;
-  },
-  methods: {
-    async updateUsername() {
-      let res = await put("/api/profile/username", {
-        username: this.usernameInput,
-      });
-      if (res.status == 200) {
-        this.tmpUsernameInput = this.usernameInput;
-        this.overallMessage = "";
-      } else {
-        this.overallMessage = res?.body.message;
-      }
-    },
-    async updateMail() {
-      let res = await put("/api/profile/mail", {
-        mail: this.mailInput,
-      });
-      if (res.status == 200) {
-        this.tmpMailInput = this.mailInput;
-        this.overallMessage = "";
-      } else {
-        this.overallMessage = res?.body.message;
-      }
-    },
-    async updatePassword() {
-      let res = await put("/api/profile/password", {
-        password: this.passwordInput,
-      });
-      if (res.status == 200) {
-        this.passwordMessage = "";
-        this.passwordSuccessMessage = "Password updated";
-        this.passwordInput = "";
-        this.passwordRepeatInput = "";
-      } else {
-        this.passwordErrorMessage = res?.body.message;
-      }
-    },
-    async deleteProfile() {
-      let res = await del("/api/profile/user");
-      if (res.status == 200) {
-        this.$router.push("/");
-      }
-    },
-    async logout() {
-      let res = await post("/api/auth/logout");
-      if (res.status == 200) {
-        this.$router.push("/");
-      }
-    },
-  },
-};
-</script>

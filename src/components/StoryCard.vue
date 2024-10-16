@@ -27,8 +27,6 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: ["story"],
-};
+<script setup>
+defineProps(["story"]);
 </script>

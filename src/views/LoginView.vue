@@ -1,3 +1,145 @@
+<script setup>
+import animJson from "../assets/svg/travelAnim.json";
+import { get, post } from "@/services/quickFetch";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useRouter } from "vue-router";
+
+const mailInput = ref("");
+const usernameInput = ref("");
+const passwordInput = ref("");
+const passwordRepeatInput = ref("");
+const message = ref("");
+const state = ref("mail");
+
+const router = useRouter();
+
+onMounted(async () => {
+  window.addEventListener("keydown", handleEnter);
+  let res = await get("/api/auth/logged_in");
+  if (res.status == 200) {
+    router.push("/lang");
+  }
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleEnter);
+});
+
+function handleEnter(event) {
+  if (event.key === "Enter") continueButton();
+}
+
+async function continueButton() {
+  if (state.value == "mail") {
+    let userExists = await checkUserExists();
+    if (userExists) {
+      state.value = "login";
+      return;
+    } else {
+      state.value = "register";
+      return;
+    }
+  }
+  if (state.value == "login") {
+    await login();
+  }
+  if (state == "register") {
+    await register();
+  }
+}
+
+async function checkUserExists() {
+  let result = await post("/api/auth/user_exists", {
+    mail: mailInput.value,
+  });
+  if (result.status == 200) {
+    return result.body.exists;
+  }
+  return false;
+}
+
+async function login() {
+  message.value = "";
+  let res = await post("/api/auth/login", {
+    mail: mailInput.value,
+    password: passwordInput.value,
+  });
+  if (res.status == 200) {
+    router.push("/lang");
+  } else if (res.body.message) {
+    message.value = res.body.message;
+  }
+}
+
+async function register() {
+  message.value = "";
+
+  if (passwordInput.value != passwordRepeatInput.value) {
+    message.value = "Password mismatch.";
+    return;
+  }
+
+  let res = await post("/api/auth/register", {
+    username: usernameInput.value,
+    mail: mailInput.value,
+    password: passwordInput.value,
+  });
+  if (res.status == 200) {
+    router.push("/lang");
+  } else if (res.body.message) {
+    message.value = res.body.message;
+  }
+}
+
+function resetState() {
+  state.value = "mail";
+  message.value = "";
+}
+
+const getContinueButtonText = computed(() => {
+  switch (state.value) {
+    case "mail":
+      return "Continue";
+      break;
+    case "login":
+      return "Login";
+      break;
+    case "register":
+      return "Register";
+      break;
+  }
+  return "Continue";
+});
+const continueButtonBlocked = computed(() => {
+  const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailPattern.test(mailInput.value)) {
+    return true;
+  }
+
+  if (state.value == "login" || state.value == "register") {
+    if (!passwordInput.value) {
+      return true;
+    }
+    if (passwordInput.value.length < 6) {
+      return true;
+    }
+  }
+
+  if (state.value == "register") {
+    if (!usernameInput.value || !passwordRepeatInput.value) {
+      return true;
+    }
+    if (
+      usernameInput.value.length < 6 ||
+      passwordRepeatInput.value.length < 6
+    ) {
+      return true;
+    }
+  }
+  return false;
+});
+</script>
+
 <template>
   <div class="wrapper w-100 overflow-hidden">
     <div class="left">
@@ -10,7 +152,7 @@
       <div class="row d-flex justify-content-center">
         <div class="d-flex flex-column w-50">
           <h1 class="display-6 w-100 text-center">Konjugo</h1>
-          <h4 class="w-100 mb-3 text-center">Join us and learn.</h4>
+          <h4 class="w-100 mb-3 mt-2 text-center">Join us and learn.</h4>
           <input
             v-model="mailInput"
             type="email"
@@ -39,7 +181,7 @@
             class="form-control mt-2"
             placeholder="Password Repeat"
           />
-          <h5 class="mt-2 text-danger">{{ this.message }}</h5>
+          <h5 class="mt-2 text-danger">{{ message }}</h5>
           <div class="d-flex justify-content-evenly">
             <button
               v-if="state != 'mail'"
@@ -112,143 +254,3 @@
   float: right;
 }
 </style>
-
-<script>
-import animJson from "../assets/svg/travelAnim.json";
-import { get, post } from "@/services/quickFetch";
-
-export default {
-  data() {
-    return {
-      mailInput: "",
-      usernameInput: "",
-      passwordInput: "",
-      passwordRepeatInput: "",
-      message: "",
-      state: "mail",
-      animJson,
-    };
-  },
-  async mounted() {
-    window.addEventListener("keydown", this.handleEnter);
-    let res = await get("/api/auth/logged_in");
-    if (res.status == 200) {
-      this.$router.push("/lang");
-    }
-  },
-  unmounted() {
-    window.removeEventListener("keydown", this.handleEnter);
-  },
-  methods: {
-    handleEnter(event) {
-      if (event.key === "Enter") this.continueButton();
-    },
-    async continueButton() {
-      if (this.state == "mail") {
-        let userExists = await this.checkUserExists();
-        if (userExists) {
-          this.state = "login";
-          return;
-        } else {
-          this.state = "register";
-          return;
-        }
-      }
-      if (this.state == "login") {
-        await this.login();
-      }
-      if (this.state == "register") {
-        await this.register();
-      }
-    },
-    async checkUserExists() {
-      let result = await post("/api/auth/user_exists", {
-        mail: this.mailInput,
-      });
-      if (result.status == 200) {
-        return result.body.exists;
-      }
-      return false;
-    },
-    async login() {
-      this.message = "";
-      let res = await post("/api/auth/login", {
-        mail: this.mailInput,
-        password: this.passwordInput,
-      });
-      if (res.status == 200) {
-        this.$router.push("/lang");
-      } else if (res.body.message) {
-        this.message = res.body.message;
-      }
-    },
-    async register() {
-      this.message = "";
-
-      if (this.passwordInput != this.passwordRepeatInput) {
-        this.message = "Password mismatch.";
-        return;
-      }
-
-      let res = await post("/api/auth/register", {
-        username: this.usernameInput,
-        mail: this.mailInput,
-        password: this.passwordInput,
-      });
-      if (res.status == 200) {
-        this.$router.push("/lang");
-      } else if (res.body.message) {
-        this.message = res.body.message;
-      }
-    },
-    resetState() {
-      this.state = "mail";
-      this.message = "";
-    },
-  },
-  computed: {
-    getContinueButtonText: (state) => {
-      switch (state.state) {
-        case "mail":
-          return "Continue";
-          break;
-        case "login":
-          return "Login";
-          break;
-        case "register":
-          return "Register";
-          break;
-      }
-      return "Continue";
-    },
-    continueButtonBlocked: (state) => {
-      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailPattern.test(state.mailInput)) {
-        return true;
-      }
-
-      if (state.state == "login" || state.state == "register") {
-        if (!state.passwordInput) {
-          return true;
-        }
-        if (state.passwordInput.length < 6) {
-          return true;
-        }
-      }
-
-      if (state.state == "register") {
-        if (!state.usernameInput || !state.passwordRepeatInput) {
-          return true;
-        }
-        if (
-          state.usernameInput.length < 6 ||
-          state.passwordRepeatInput.length < 6
-        ) {
-          return true;
-        }
-      }
-      return false;
-    },
-  },
-};
-</script>

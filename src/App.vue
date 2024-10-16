@@ -1,5 +1,3 @@
-<script setup></script>
-
 <template>
   <RouterView class="h-100" />
 </template>
@@ -10,10 +8,6 @@ $success: rgb(91, 178, 132);
 
 @import "./assets/customBootstrap.scss";
 @import "bootstrap";
-
-* {
-  font-family: "HelveticaNowText Bold", "HelveticaNeueCyr";
-}
 
 hr {
   border-width: 3px;

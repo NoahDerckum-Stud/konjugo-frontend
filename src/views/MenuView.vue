@@ -1,6 +1,11 @@
 <script setup>
-import NavigationBar from "../components/NavigationBar.vue";
 import MenuCard from "@/components/MenuCard.vue";
+import NavigationBar from "@/components/NavigationBar.vue";
+
+import todoAnim from "../assets/svg/todoAnim.json";
+import bookAnim from "../assets/svg/bookAnim.json";
+import graphAnim from "../assets/svg/graphAnim.json";
+import profileAnim from "../assets/svg/profileAnim.json";
 </script>
 
 <template>
@@ -40,32 +45,3 @@ import MenuCard from "@/components/MenuCard.vue";
     </div>
   </div>
 </template>
-
-<script>
-import { post } from "../services/quickFetch.js";
-import { useSettingsStore } from "@/stores/settingsStore";
-
-import todoAnim from "../assets/svg/todoAnim.json";
-import bookAnim from "../assets/svg/bookAnim.json";
-import graphAnim from "../assets/svg/graphAnim.json";
-import profileAnim from "../assets/svg/profileAnim.json";
-
-export default {
-  data() {
-    return {
-      todoAnim,
-      bookAnim,
-      graphAnim,
-      profileAnim,
-    };
-  },
-  methods: {
-    async logout() {
-      let res = await post("/api/auth/logout");
-      if (res.status == 200) {
-        this.$router.push("/");
-      }
-    },
-  },
-};
-</script>

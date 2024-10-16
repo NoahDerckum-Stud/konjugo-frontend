@@ -18,10 +18,8 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: ["anim", "header", "description"],
-};
+<script setup>
+defineProps(["anim", "header", "description"]);
 </script>
 
 <style lang="scss" scoped>

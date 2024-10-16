@@ -1,6 +1,60 @@
 <script setup>
 import NavigationBar from "@/components/NavigationBar.vue";
 import StoryCard from "@/components/StoryCard.vue";
+import { post } from "@/services/quickFetch";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+
+const dashboard = ref(undefined);
+const router = useRouter();
+
+onMounted(async () => {
+  const settingsStore = useSettingsStore();
+  let result = await post("/api/stories/get_story_dash", {
+    langiso: settingsStore.selectedLanguage.langiso,
+  });
+  if (result.status == 200) {
+    dashboard.value = result.body;
+  }
+});
+
+function cardClicked(id) {
+  router.push({ path: "/trainstory", query: { id } });
+}
+
+async function likeClicked(story) {
+  if (story.liked) {
+    setLikeStory(story._id, false);
+  } else {
+    setLikeStory(story._id, true);
+  }
+  await post("/api/stories/set_story_like", {
+    id: story._id,
+    state: story.liked,
+  });
+}
+
+function setLikeStory(id, state) {
+  for (let story of dashboard.value.userStories) {
+    if (story._id == id) {
+      story.likeCount += state ? 1 : -1;
+      story.liked = state;
+    }
+  }
+  for (let story of dashboard.value.popularStories) {
+    if (story._id == id) {
+      story.likeCount += state ? 1 : -1;
+      story.liked = state;
+    }
+  }
+  for (let story of dashboard.value.recentStories) {
+    if (story._id == id) {
+      story.likeCount += state ? 1 : -1;
+      story.liked = state;
+    }
+  }
+}
 </script>
 
 <template>
@@ -56,61 +110,3 @@ import StoryCard from "@/components/StoryCard.vue";
     </div>
   </div>
 </template>
-
-<script>
-import { post } from "@/services/quickFetch";
-import { useSettingsStore } from "@/stores/settingsStore";
-export default {
-  data() {
-    return {
-      dashboard: undefined,
-    };
-  },
-  async mounted() {
-    const settingsStore = useSettingsStore();
-    let result = await post("/api/stories/get_story_dash", {
-      langiso: settingsStore.selectedLanguage.langiso,
-    });
-    if (result.status == 200) {
-      this.dashboard = result.body;
-      console.log(this.dashboard);
-    }
-  },
-  methods: {
-    cardClicked(id) {
-      this.$router.push({ path: "/trainstory", query: { id } });
-    },
-    async likeClicked(story) {
-      if (story.liked) {
-        this.setLikeStory(story._id, false);
-      } else {
-        this.setLikeStory(story._id, true);
-      }
-      await post("/api/stories/set_story_like", {
-        id: story._id,
-        state: story.liked,
-      });
-    },
-    setLikeStory(id, state) {
-      for (let story of this.dashboard.userStories) {
-        if (story._id == id) {
-          story.likeCount += state ? 1 : -1;
-          story.liked = state;
-        }
-      }
-      for (let story of this.dashboard.popularStories) {
-        if (story._id == id) {
-          story.likeCount += state ? 1 : -1;
-          story.liked = state;
-        }
-      }
-      for (let story of this.dashboard.recentStories) {
-        if (story._id == id) {
-          story.likeCount += state ? 1 : -1;
-          story.liked = state;
-        }
-      }
-    },
-  },
-};
-</script>
