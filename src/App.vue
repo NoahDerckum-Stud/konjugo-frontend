@@ -2,6 +2,21 @@
   <RouterView class="h-100" />
 </template>
 
+<script setup>
+import { onMounted } from "vue";
+import { get } from "./services/quickFetch";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+onMounted(async () => {
+  let res = await get("/api/auth/logged_in");
+  if (res.status == 401) {
+    router.push("/");
+  }
+});
+</script>
+
 <style lang="scss">
 $primary: #7289da;
 $success: rgb(91, 178, 132);

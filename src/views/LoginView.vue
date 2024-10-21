@@ -15,10 +15,6 @@ const router = useRouter();
 
 onMounted(async () => {
   window.addEventListener("keydown", handleEnter);
-  let res = await get("/api/auth/logged_in");
-  if (res.status == 200) {
-    router.push("/lang");
-  }
 });
 
 onUnmounted(() => {
