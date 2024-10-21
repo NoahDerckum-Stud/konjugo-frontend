@@ -12,18 +12,23 @@ const descriptionInput = ref("");
 const storyPosting = ref(false);
 const types = ref(["V", "ADJ", "N"]);
 const router = useRouter();
+const errorMessage = ref(undefined);
 
 async function postStory() {
   storyPosting.value = true;
-  await post("/api/stories/story", {
+  let res = await post("/api/stories/story", {
     title: titleInput.value,
     description: descriptionInput.value,
     story: storyInput.value,
     langiso: settingsStore.selectedLanguage.langiso,
     types: types.value,
   });
-  router.push("/storylib");
   storyPosting.value = false;
+  if (res.status == 200) {
+    router.push("/storylib");
+  } else if (res.body.message) {
+    errorMessage.value = res.body.message;
+  }
 }
 
 function toggleTypes(val) {
@@ -113,6 +118,9 @@ const typeChecked = computed(() => (type) => {
           >
             Create Story
           </button>
+          <h5 v-if="errorMessage" class="text-danger mt-1">
+            {{ errorMessage }}
+          </h5>
         </div>
       </div>
     </div>

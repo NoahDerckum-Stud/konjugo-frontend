@@ -2,10 +2,10 @@
 @import "../node_modules/bootstrap/scss/variables";
 @import "../node_modules/bootstrap/scss/mixins";
 
-$custom-colors: (
+$custom-colors-darkmode: (
   "noun": #9460a7,
   "verb": #A7425C,
   "adjective": #F3825F,
 );
 
-$theme-colors: map-merge($theme-colors, $custom-colors);
+  $theme-colors: map-merge($theme-colors, $custom-colors-darkmode);

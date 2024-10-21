@@ -110,6 +110,7 @@ const getContinueButtonText = computed(() => {
   }
   return "Continue";
 });
+
 const continueButtonBlocked = computed(() => {
   const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if (!emailPattern.test(mailInput.value)) {
@@ -138,6 +139,12 @@ const continueButtonBlocked = computed(() => {
   }
   return false;
 });
+
+const dynamicSubtitle = computed(() => {
+  if (state.value == "mail") return "Please enter your mail.";
+  if (state.value == "login") return "Log into your account.";
+  if (state.value == "register") return "Register a new account";
+});
 </script>
 
 <template>
@@ -153,6 +160,7 @@ const continueButtonBlocked = computed(() => {
         <div class="d-flex flex-column w-50">
           <h1 class="display-6 w-100 text-center">Konjugo</h1>
           <h4 class="w-100 mb-3 mt-2 text-center">Join us and learn.</h4>
+          <h5 class="w-100 mb-3 mt-2 text-center">{{ dynamicSubtitle }}</h5>
           <input
             v-model="mailInput"
             type="email"

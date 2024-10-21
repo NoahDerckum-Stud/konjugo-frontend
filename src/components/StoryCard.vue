@@ -13,6 +13,20 @@
       </p>
     </div>
     <div class="card-footer text-center bg-transparent py-0">
+      <button
+        v-if="story?.deletable"
+        class="btn btn-outline-danger h-100 me-2"
+        @click="$emit('request-delete', story)"
+      >
+        <div class="d-flex h-100">
+          <p
+            class="m-0 p-0 my-auto"
+            style="font-size: 1.2rem; line-height: 1rem"
+          >
+            {{ "x" }}
+          </p>
+        </div>
+      </button>
       <button class="btn" @click="$emit('like-clicked', story)">
         <div class="d-flex">
           <p class="m-0 p-0 my-auto" style="font-size: 2rem; line-height: 1rem">

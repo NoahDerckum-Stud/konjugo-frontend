@@ -2,7 +2,7 @@
 import AsyncContainer from "@/components/AsyncContainer.vue";
 import NavigationBar from "@/components/NavigationBar.vue";
 import { post } from "@/services/quickFetch";
-import { getTagTitle } from "../services/attributeParser.js";
+import { getTagTitle, getTypeMeta } from "../services/attributeParser.js";
 import {
   bakedComparision,
   getResultCharClass,
@@ -70,8 +70,12 @@ const tagTitle = computed(
       <NavigationBar />
       <div class="row">
         <div class="d-flex">
-          <h2 class="ms-2 mt-4 text-decoration-underline">Test</h2>
-          <h4 class="ms-3 mt-4 text-muted mt-auto mb-0">by jdksfafsl</h4>
+          <h2 class="ms-2 mt-4 text-decoration-underline">
+            {{ fetchedStory.title }}
+          </h2>
+          <h4 class="ms-3 mt-4 text-muted mt-auto mb-0">
+            by {{ fetchedStory.username }}
+          </h4>
         </div>
         <div class="mt-3 d-flex flex-wrap w-100 responsive-bottom">
           <div
@@ -109,6 +113,11 @@ const tagTitle = computed(
           <div v-if="focusedElement" class="d-flex mb-2">
             <h3 class="my-auto">Lemma: {{ focusedElement?.element?.lemma }}</h3>
             <h4 class="ms-2 my-auto">
+              <span
+                class="badge rounded-pill ms-2"
+                :class="`bg-${getTypeMeta(focusedElement.element.type).color}`"
+                >{{ getTypeMeta(focusedElement.element.type).written }}</span
+              >
               <span
                 v-for="tag in focusedElement?.element.tags"
                 class="ms-2 badge bg-secondary rounded-pill bg-success"

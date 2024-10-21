@@ -183,7 +183,9 @@ const getResultCharClass = computed(() => (role) => {
       <div class="h-100 d-flex flex-column">
         <div class="d-flex justify-content-center" style="height: 10%">
           <div class="d-flex w-100 justify-content-center my-auto mx-0">
-            <h3>Spanish</h3>
+            <h3>
+              {{ settingsStore.selectedLanguage.title[settingsStore.langiso] }}
+            </h3>
             <h3 class="mx-5">
               {{ currentChallange + 1 }} / {{ challanges.length }}
             </h3>

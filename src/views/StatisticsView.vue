@@ -346,6 +346,10 @@ async function refresh() {
   loading.value = false;
 }
 
+onMounted(() => {
+  refresh();
+});
+
 function toggleIngoreGroupType(type) {
   if (!ignoredGroupTypes.value.includes(type)) {
     ignoredGroupTypes.value.push(type);
