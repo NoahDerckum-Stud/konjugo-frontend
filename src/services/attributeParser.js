@@ -1,5 +1,4 @@
 function getPreview(langInfo, attributes) {
-  console.log(langInfo.groups);
   for (let i = 0; i < langInfo.groups.length; i++) {
     let currentGroup = langInfo.groups[i];
     for (let j = 0; j < currentGroup.tags.length; j++) {

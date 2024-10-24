@@ -15,6 +15,10 @@ const router = useRouter();
 
 onMounted(async () => {
   window.addEventListener("keydown", handleEnter);
+  let res = await get("/api/auth/logged_in");
+  if (res.status == 200) {
+    router.push("/lang");
+  }
 });
 
 onUnmounted(() => {
@@ -26,6 +30,8 @@ function handleEnter(event) {
 }
 
 async function continueButton() {
+  if (continueButtonBlocked.value) return;
+
   if (state.value == "mail") {
     let userExists = await checkUserExists();
     if (userExists) {
@@ -39,7 +45,7 @@ async function continueButton() {
   if (state.value == "login") {
     await login();
   }
-  if (state == "register") {
+  if (state.value == "register") {
     await register();
   }
 }

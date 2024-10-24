@@ -1,18 +1,21 @@
 <script setup>
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useRouter } from "vue-router";
 const settingsStore = useSettingsStore();
+const router = useRouter();
 </script>
 
 <template>
   <div class="row px-0">
     <div class="col-12">
       <div class="d-flex my-2 mt-3">
-        <router-link
+        <button
           v-if="$route.name != 'dash'"
-          to="/dash"
+          @click="router.back"
           class="btn my-auto me-2"
-          ><h5 class="m-0 p-1"><</h5></router-link
         >
+          <h5 class="m-0 p-1"><</h5>
+        </button>
         <div
           class="my-auto"
           style="

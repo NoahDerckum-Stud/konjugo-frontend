@@ -55,12 +55,13 @@ async function updatePassword() {
     password: passwordInput.value,
   });
   if (res.status == 200) {
-    passwordMessage.value = "";
+    passwordErrorMessage.value = "";
     passwordSuccessMessage.value = "Password updated";
     passwordInput.value = "";
     passwordRepeatInput.value = "";
   } else {
     passwordErrorMessage.value = res?.body.message;
+    passwordSuccessMessage.value = "";
   }
 }
 

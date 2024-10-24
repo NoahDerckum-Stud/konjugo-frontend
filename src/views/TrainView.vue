@@ -18,6 +18,7 @@ const selectedLanguage = ref(undefined);
 const challanges = ref(undefined);
 const currentChallange = ref(0);
 const currentSeconds = ref(0);
+const lastTimerSet = ref(new Date());
 const currentInput = ref("");
 const secondTimer = ref(undefined);
 const currentResult = ref(undefined);
@@ -53,6 +54,7 @@ function startTimer() {
   secondTimer.value = setInterval(() => {
     currentSeconds.value++;
   }, 1000);
+  lastTimerSet.value = new Date();
 }
 
 function stopTimer() {
@@ -77,16 +79,19 @@ function checkResult() {
     currentAnim.value = wrongAnim;
   }
 
+  let calculatedTimeDiff = +((new Date() - lastTimerSet.value) / 1000).toFixed(
+    2
+  );
   let statistic = {
     langiso: selectedLanguage.value.langiso,
     lemma: challanges.value[currentChallange.value].lemma,
     tags: toRaw(challanges.value[currentChallange.value].tags),
     timestamp: new Date(),
-    seconds: currentSeconds.value,
+    seconds: calculatedTimeDiff,
     levenshtein: currentResult.value.levenshteinDistance,
   };
+
   statistics.value.push(statistic);
-  console.log(statistic);
 }
 
 function generateSummary() {
@@ -106,7 +111,7 @@ function generateSummary() {
 
   return {
     levenshteinSum: levenshteinSum,
-    averageTime: secondsSum / statisticCount,
+    averageTime: +(secondsSum / statisticCount).toFixed(2),
     correctSum: correctSum,
   };
 }

@@ -46,7 +46,6 @@ async function lemmaInputChanged(event) {
       lemma: event.target.value?.toLowerCase(),
     });
     previewLemmas.value = res.body;
-    console.log(res.body);
   } else {
     previewLemmas.value = [];
   }
@@ -117,7 +116,6 @@ async function fetchLemmaCollections() {
 const blockStartButton = computed(() => {
   let lemmas = toRaw(selectedLemmas);
   let tags = generateTagList();
-  console.log(lemmas, tags);
   if (lemmas.length == 0 || tags.length == 0) return true;
 
   return false;
@@ -261,7 +259,6 @@ const showGroup = computed(() => (type) => {
                         :id="section.id"
                         autocomplete="off"
                         v-model="section.checked"
-                        @click="console.log(section)"
                       />
                       <label
                         class="btn btn-outline-success mt-1 me-2"

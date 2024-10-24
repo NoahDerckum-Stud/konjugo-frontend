@@ -120,7 +120,6 @@ function bakedComparision(expected, actual) {
     }
   }
 
-  console.log(result);
   return { result, levenshteinDistance };
 }
 

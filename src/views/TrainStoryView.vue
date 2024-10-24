@@ -45,6 +45,16 @@ function finishButton() {
     router.push("/storylib");
   }
 }
+
+async function likeButtonClicked() {
+  if (!fetchedStory.value) return;
+  await post("/api/stories/set_story_like", {
+    id: fetchedStory.value._id,
+    state: !fetchedStory.value.liked,
+  });
+  fetchedStory.value.liked = !fetchedStory.value.liked;
+}
+
 function checkResult() {
   for (let i = 0; i < fetchedStory.value.text.length; i++) {
     let word = fetchedStory.value.text[i];
@@ -53,7 +63,6 @@ function checkResult() {
       let expected = fetchedStory.value.placeholders[word].flection;
       let result = bakedComparision(expected, input ? input : "");
       fetchedStory.value.text[i] = result;
-      console.log(expected, result);
     }
   }
   state.value = "done";
@@ -76,6 +85,19 @@ const tagTitle = computed(
           <h4 class="ms-3 mt-4 text-muted mt-auto mb-0">
             by {{ fetchedStory.username }}
           </h4>
+          <button class="btn mt-auto ms-2" @click="likeButtonClicked">
+            <div class="d-flex">
+              <p
+                class="m-0 p-0 my-auto"
+                style="font-size: 2rem; line-height: 1rem"
+              >
+                {{ !fetchedStory?.liked ? "♡" : "♥" }}
+              </p>
+              <p class="m-0 my-auto ms-2">
+                {{ fetchedStory?.liked ? "Liked" : "Not Liked" }}
+              </p>
+            </div>
+          </button>
         </div>
         <div class="mt-3 d-flex flex-wrap w-100 responsive-bottom">
           <div
