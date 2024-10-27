@@ -174,6 +174,8 @@ async function logout() {
               />
             </div>
           </div>
+          <hr />
+          <p class="text-muted">Konjugo, made by Noah Derckum - 1.0.0</p>
         </div>
       </div>
     </div>

@@ -159,7 +159,7 @@ const dynamicSubtitle = computed(() => {
 
     <div class="right vertical-center">
       <div class="row d-flex justify-content-center">
-        <div class="d-flex flex-column w-50">
+        <div class="d-flex flex-column w-50 right-input">
           <h1 class="display-6 w-100 text-center">Konjugo</h1>
           <h4 class="w-100 mb-3 mt-2 text-center">Join us and learn.</h4>
           <h5 class="w-100 mb-3 mt-2 text-center">{{ dynamicSubtitle }}</h5>
@@ -236,14 +236,6 @@ const dynamicSubtitle = computed(() => {
   transform: translateY(-50%);
 }
 
-.left {
-  width: 40%;
-  float: left;
-  background-color: rgb(255, 0, 0);
-  animation: color-change 6s infinite;
-  height: 100%;
-}
-
 @keyframes color-change {
   0% {
     background-color: rgb(133, 0, 138); /* Rot */
@@ -259,8 +251,28 @@ const dynamicSubtitle = computed(() => {
   }
 }
 
+.left {
+  width: 40%;
+  float: left;
+  background-color: rgb(255, 0, 0);
+  animation: color-change 6s infinite;
+  height: 100%;
+  @media screen and (max-width: 600px) {
+    width: 0% !important;
+  }
+}
+
 .right {
   width: 60%;
   float: right;
+  @media screen and (max-width: 600px) {
+    width: 100% !important;
+  }
+}
+
+.right-input {
+  @media screen and (max-width: 600px) {
+    width: 80% !important;
+  }
 }
 </style>

@@ -11,7 +11,7 @@ const router = useRouter();
       <div class="d-flex my-2 mt-3">
         <button
           v-if="$route.name != 'dash'"
-          @click="router.back"
+          @click="router.push('/dash')"
           class="btn my-auto me-2"
         >
           <h5 class="m-0 p-1"><</h5>
